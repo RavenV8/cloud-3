@@ -24,6 +24,7 @@ class Book(db.Model):
     published_date = db.Column(db.Date, nullable=False)
     pages = db.Column(db.Integer, nullable=False)
     available = db.Column(db.Boolean, default=True)
+    author_portrait = db.Column(db.String(255), nullable=True)
 
 
 with app.app_context():
