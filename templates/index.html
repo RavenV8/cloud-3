@@ -57,6 +57,8 @@
                 <p>Pages: {{ book.pages }}</p>
                 <p>Available: {{ book.available }}</p>
 
+                <a href="/edit/{{ book.id }}">Edit</a>
+                |
                 <a href="/delete/{{ book.id }}">Delete</a>
             </div>
 
