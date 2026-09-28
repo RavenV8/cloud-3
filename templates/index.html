@@ -1,56 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <title>Book Manager</title>
+
 </head>
 
 <body>
 
     <h1>Book Manager</h1>
 
+
+    <!-- ======================== -->
+    <!-- ADD BOOK -->
+    <!-- ======================== -->
+
     <h2>Add a Book</h2>
 
-    <form action="/add" method="POST" enctype="multipart/form-data">
+    <form
+        action="/add"
+        method="POST"
+        enctype="multipart/form-data"
+    >
 
         <div>
-            <label for="title">Title:</label>
+
+            <label for="title">
+                Title:
+            </label>
+
             <input
                 type="text"
                 id="title"
                 name="title"
                 required
             >
+
         </div>
 
         <br>
 
+
         <div>
-            <label for="author">Author:</label>
+
+            <label for="author">
+                Author:
+            </label>
+
             <input
                 type="text"
                 id="author"
                 name="author"
                 required
             >
+
         </div>
 
         <br>
 
+
         <div>
-            <label for="published_date">Published date:</label>
+
+            <label for="published_date">
+                Published date:
+            </label>
+
             <input
                 type="date"
                 id="published_date"
                 name="published_date"
                 required
             >
+
         </div>
 
         <br>
 
+
         <div>
-            <label for="pages">Pages:</label>
+
+            <label for="pages">
+                Pages:
+            </label>
+
             <input
                 type="number"
                 id="pages"
@@ -58,33 +93,47 @@
                 min="1"
                 required
             >
+
         </div>
 
         <br>
 
+
         <div>
-            <label for="author_portrait">Author portrait:</label>
+
+            <label for="author_portrait">
+                Author portrait:
+            </label>
+
             <input
                 type="file"
                 id="author_portrait"
                 name="author_portrait"
                 accept="image/*"
             >
+
         </div>
 
         <br>
 
+
         <div>
+
             <label>
+
                 <input
                     type="checkbox"
                     name="available"
                 >
+
                 Available
+
             </label>
+
         </div>
 
         <br>
+
 
         <button type="submit">
             Add Book
@@ -96,7 +145,12 @@
     <hr>
 
 
+    <!-- ======================== -->
+    <!-- BOOK LIST -->
+    <!-- ======================== -->
+
     <h2>Books</h2>
+
 
     {% if books %}
 
@@ -104,45 +158,132 @@
 
             <div>
 
-                <h3>{{ book.title }}</h3>
+                <h3>
+                    {{ book.title }}
+                </h3>
+
 
                 <p>
-                    <strong>Author:</strong>
+
+                    <strong>
+                        Author:
+                    </strong>
+
                     {{ book.author }}
+
                 </p>
 
+
                 <p>
-                    <strong>Published date:</strong>
+
+                    <strong>
+                        Published date:
+                    </strong>
+
                     {{ book.published_date }}
+
                 </p>
 
+
                 <p>
-                    <strong>Pages:</strong>
+
+                    <strong>
+                        Pages:
+                    </strong>
+
                     {{ book.pages }}
+
                 </p>
 
+
                 <p>
-                    <strong>Available:</strong>
+
+                    <strong>
+                        Available:
+                    </strong>
+
                     {% if book.available %}
+
                         Yes
+
                     {% else %}
+
                         No
+
                     {% endif %}
+
                 </p>
+
+
+                <!-- ======================== -->
+                <!-- AUTHOR PORTRAIT -->
+                <!-- ======================== -->
 
                 {% if book.author_portrait %}
+
                     <p>
-                        <strong>Author portrait:</strong>
+
+                        <strong>
+                            Author portrait:
+                        </strong>
+
                     </p>
 
+
                     <img
-                        src="{{ url_for('uploaded_file', filename=book.author_portrait) }}"
+                        src="{{ url_for(
+                            'uploaded_file',
+                            filename=book.author_portrait
+                        ) }}"
                         width="150"
                         alt="Author portrait"
                     >
+
+
+                    {% if book.portrait_width %}
+
+                        <p>
+
+                            <strong>
+                                Image dimensions:
+                            </strong>
+
+                            {{ book.portrait_width }}
+                            ×
+                            {{ book.portrait_height }}
+                            px
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                File size:
+                            </strong>
+
+                            {{ book.portrait_size }}
+                            bytes
+
+                        </p>
+
+                    {% else %}
+
+                        <p>
+                            Image is being processed...
+                        </p>
+
+                    {% endif %}
+
                 {% endif %}
 
+
+                <!-- ======================== -->
+                <!-- ACTIONS -->
+                <!-- ======================== -->
+
                 <p>
+
                     <a href="/edit/{{ book.id }}">
                         Edit
                     </a>
@@ -152,9 +293,11 @@
                     <a href="/delete/{{ book.id }}">
                         Delete
                     </a>
+
                 </p>
 
             </div>
+
 
             <hr>
 
@@ -162,9 +305,13 @@
 
     {% else %}
 
-        <p>No books yet.</p>
+        <p>
+            No books yet.
+        </p>
 
     {% endif %}
 
+
 </body>
+
 </html>
