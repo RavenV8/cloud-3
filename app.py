@@ -1,8 +1,15 @@
-from flask import Flask, render_template, request, redirect, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import os
 
 app = Flask(__name__)
+
+UPLOAD_FOLDER = "uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///books.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
