@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -23,6 +23,10 @@ with app.app_context():
     db.create_all()
 
 
+# --------------------
+# WEB APPLICATION
+# --------------------
+
 @app.route("/")
 def home():
     books = Book.query.all()
@@ -33,9 +37,11 @@ def home():
 def add_book():
     title = request.form["title"]
     author = request.form["author"]
+
     published_date = datetime.strptime(
         request.form["published_date"], "%Y-%m-%d"
     ).date()
+
     pages = int(request.form["pages"])
     available = "available" in request.form
 
@@ -61,6 +67,7 @@ def edit_book(id):
     book = Book.query.get_or_404(id)
 
     if request.method == "POST":
+
         book.title = request.form["title"]
         book.author = request.form["author"]
 
@@ -89,6 +96,133 @@ def delete_book(id):
     db.session.commit()
 
     return redirect("/")
+
+
+# --------------------
+# PUBLIC API
+# --------------------
+
+@app.route("/api/books", methods=["GET"])
+def api_get_books():
+
+    books = Book.query.all()
+
+    return jsonify([
+        {
+            "id": book.id,
+            "title": book.title,
+            "author": book.author,
+            "published_date": book.published_date.isoformat(),
+            "pages": book.pages,
+            "available": book.available
+        }
+        for book in books
+    ])
+
+
+@app.route("/api/books/<int:id>", methods=["GET"])
+def api_get_book(id):
+
+    book = Book.query.get_or_404(id)
+
+    return jsonify({
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "published_date": book.published_date.isoformat(),
+        "pages": book.pages,
+        "available": book.available
+    })
+
+
+@app.route("/api/books", methods=["POST"])
+def api_create_book():
+
+    data = request.get_json()
+
+    try:
+        title = data["title"]
+        author = data["author"]
+        published_date = datetime.strptime(
+            data["published_date"], "%Y-%m-%d"
+        ).date()
+        pages = int(data["pages"])
+        available = bool(data["available"])
+
+        if not title or not author:
+            return jsonify({"error": "Title and author are required"}), 400
+
+        if pages <= 0:
+            return jsonify({"error": "Pages must be greater than 0"}), 400
+
+    except (KeyError, ValueError, TypeError):
+        return jsonify({"error": "Invalid input"}), 400
+
+    book = Book(
+        title=title,
+        author=author,
+        published_date=published_date,
+        pages=pages,
+        available=available
+    )
+
+    db.session.add(book)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Book created",
+        "id": book.id
+    }), 201
+
+
+@app.route("/api/books/<int:id>", methods=["PUT"])
+def api_update_book(id):
+
+    book = Book.query.get_or_404(id)
+    data = request.get_json()
+
+    try:
+        book.title = data["title"]
+        book.author = data["author"]
+
+        book.published_date = datetime.strptime(
+            data["published_date"], "%Y-%m-%d"
+        ).date()
+
+        book.pages = int(data["pages"])
+        book.available = bool(data["available"])
+
+        if not book.title or not book.author:
+            return jsonify({
+                "error": "Title and author are required"
+            }), 400
+
+        if book.pages <= 0:
+            return jsonify({
+                "error": "Pages must be greater than 0"
+            }), 400
+
+    except (KeyError, ValueError, TypeError):
+        return jsonify({"error": "Invalid input"}), 400
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Book updated"
+    })
+
+
+@app.route("/api/books/<int:id>", methods=["DELETE"])
+def api_delete_book(id):
+
+    book = Book.query.get_or_404(id)
+
+    db.session.delete(book)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Book deleted"
+    })
 
 
 if __name__ == "__main__":
