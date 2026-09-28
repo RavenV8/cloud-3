@@ -9,11 +9,66 @@
 
     <h1>Book Manager</h1>
 
-    <p>My cloud computing application.</p>
+    <h2>Add a Book</h2>
+
+    <form action="/add" method="POST">
+
+        <p>
+            Title:
+            <input type="text" name="title" required>
+        </p>
+
+        <p>
+            Author:
+            <input type="text" name="author" required>
+        </p>
+
+        <p>
+            Published date:
+            <input type="date" name="published_date" required>
+        </p>
+
+        <p>
+            Pages:
+            <input type="number" name="pages" min="1" required>
+        </p>
+
+        <p>
+            Available:
+            <input type="checkbox" name="available" checked>
+        </p>
+
+        <button type="submit">Add Book</button>
+
+    </form>
+
 
     <h2>Books</h2>
 
-    <p>No books yet.</p>
+    {% if books %}
+
+        {% for book in books %}
+
+            <div>
+                <h3>{{ book.title }}</h3>
+
+                <p>Author: {{ book.author }}</p>
+                <p>Published: {{ book.published_date }}</p>
+                <p>Pages: {{ book.pages }}</p>
+                <p>Available: {{ book.available }}</p>
+
+                <a href="/delete/{{ book.id }}">Delete</a>
+            </div>
+
+            <hr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>No books yet.</p>
+
+    {% endif %}
 
 </body>
 </html>
