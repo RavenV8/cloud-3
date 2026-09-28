@@ -9,8 +9,10 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from PIL import Image
 import os
-
+import threading
+import time
 app = Flask(__name__)
 
 # Database
