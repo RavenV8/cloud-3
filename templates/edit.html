@@ -9,65 +9,115 @@
 
     <h1>Edit Book</h1>
 
-    <form action="/edit/{{ book.id }}" method="POST">
+    <form
+        action="/edit/{{ book.id }}"
+        method="POST"
+        enctype="multipart/form-data"
+    >
 
-        <p>
-            Title:
+        <div>
+            <label for="title">Title:</label>
             <input
                 type="text"
+                id="title"
                 name="title"
                 value="{{ book.title }}"
                 required
             >
-        </p>
+        </div>
 
-        <p>
-            Author:
+        <br>
+
+        <div>
+            <label for="author">Author:</label>
             <input
                 type="text"
+                id="author"
                 name="author"
                 value="{{ book.author }}"
                 required
             >
-        </p>
+        </div>
 
-        <p>
-            Published date:
+        <br>
+
+        <div>
+            <label for="published_date">Published date:</label>
             <input
                 type="date"
+                id="published_date"
                 name="published_date"
                 value="{{ book.published_date }}"
                 required
             >
-        </p>
+        </div>
 
-        <p>
-            Pages:
+        <br>
+
+        <div>
+            <label for="pages">Pages:</label>
             <input
                 type="number"
+                id="pages"
                 name="pages"
-                min="1"
                 value="{{ book.pages }}"
+                min="1"
                 required
             >
-        </p>
+        </div>
 
-        <p>
-            Available:
+        <br>
+
+        <div>
+            <label for="author_portrait">New author portrait:</label>
             <input
-                type="checkbox"
-                name="available"
-                {% if book.available %}checked{% endif %}
+                type="file"
+                id="author_portrait"
+                name="author_portrait"
+                accept="image/*"
             >
-        </p>
+        </div>
 
-        <button type="submit">Update Book</button>
+        <br>
+
+        {% if book.author_portrait %}
+            <div>
+                <p>Current portrait:</p>
+
+                <img
+                    src="{{ url_for('uploaded_file', filename=book.author_portrait) }}"
+                    width="150"
+                    alt="Current author portrait"
+                >
+            </div>
+
+            <br>
+        {% endif %}
+
+        <div>
+            <label>
+                <input
+                    type="checkbox"
+                    name="available"
+                    {% if book.available %}checked{% endif %}
+                >
+                Available
+            </label>
+        </div>
+
+        <br>
+
+        <button type="submit">
+            Update Book
+        </button>
 
     </form>
 
-    <p>
-        <a href="/">Back to books</a>
-    </p>
+    <br>
+
+    <a href="/">
+        Back to books
+    </a>
 
 </body>
 </html>
