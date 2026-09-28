@@ -45,29 +45,33 @@ def home():
 def add_book():
     title = request.form["title"]
     author = request.form["author"]
-
     published_date = datetime.strptime(
         request.form["published_date"], "%Y-%m-%d"
     ).date()
-
     pages = int(request.form["pages"])
     available = "available" in request.form
 
-    if pages <= 0:
-        return "Pages must be greater than 0", 400
+    portrait = request.files.get("author_portrait")
+
+    filename = None
+
+    if portrait and portrait.filename:
+        filename = portrait.filename
+        portrait.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
     book = Book(
         title=title,
         author=author,
         published_date=published_date,
         pages=pages,
-        available=available
+        available=available,
+        author_portrait=filename
     )
 
     db.session.add(book)
     db.session.commit()
 
-    return redirect("/")
+    return redirect(url_for("index"))
 
 
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
