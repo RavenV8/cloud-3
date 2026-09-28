@@ -37,6 +37,9 @@ class Book(db.Model):
     pages = db.Column(db.Integer, nullable=False)
     available = db.Column(db.Boolean, default=True)
     author_portrait = db.Column(db.String(255), nullable=True)
+    portrait_width = db.Column(db.Integer, nullable=True)
+    portrait_height = db.Column(db.Integer, nullable=True)
+    portrait_size = db.Column(db.Integer, nullable=True)
 
 
 # Create database
@@ -328,5 +331,86 @@ def api_delete_book(id):
 # RUN APPLICATION
 # -------------------------
 
+def process_portraits():
+    while True:
+        with app.app_context():
+
+            books = Book.query.filter(
+                Book.author_portrait.isnot(None),
+                Book.portrait_width.is_(None)
+            ).all()
+
+            for book in books:
+                file_path = os.path.join(
+                    app.config["UPLOAD_FOLDER"],
+                    book.author_portrait
+                )
+
+                if os.path.exists(file_path):
+                    try:
+                        with Image.open(file_path) as image:
+                            book.portrait_width = image.width
+                            book.portrait_height = image.height
+
+                        book.portrait_size = os.path.getsize(file_path)
+
+                        db.session.commit()
+
+                        print(
+                            f"Background task processed portrait "
+                            f"for book: {book.title}"
+                        )
+
+                    except Exception as error:
+                        print(
+                            f"Could not process portrait: {error}"
+                        )
+
+        time.sleep(10)
+
+def process_portraits():
+    while True:
+        with app.app_context():
+
+            books = Book.query.filter(
+                Book.author_portrait.isnot(None),
+                Book.portrait_width.is_(None)
+            ).all()
+
+            for book in books:
+                file_path = os.path.join(
+                    app.config["UPLOAD_FOLDER"],
+                    book.author_portrait
+                )
+
+                if os.path.exists(file_path):
+                    try:
+                        with Image.open(file_path) as image:
+                            book.portrait_width = image.width
+                            book.portrait_height = image.height
+
+                        book.portrait_size = os.path.getsize(file_path)
+
+                        db.session.commit()
+
+                        print(
+                            f"Background task processed portrait "
+                            f"for book: {book.title}"
+                        )
+
+                    except Exception as error:
+                        print(
+                            f"Could not process portrait: {error}"
+                        )
+
+        time.sleep(10)
+
 if __name__ == "__main__":
+    background_thread = threading.Thread(
+        target=process_portraits,
+        daemon=True
+    )
+
+    background_thread.start()
+
     app.run(debug=True)
