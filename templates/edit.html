@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Book</title>
+</head>
+
+<body>
+
+    <h1>Edit Book</h1>
+
+    <form action="/edit/{{ book.id }}" method="POST">
+
+        <p>
+            Title:
+            <input
+                type="text"
+                name="title"
+                value="{{ book.title }}"
+                required
+            >
+        </p>
+
+        <p>
+            Author:
+            <input
+                type="text"
+                name="author"
+                value="{{ book.author }}"
+                required
+            >
+        </p>
+
+        <p>
+            Published date:
+            <input
+                type="date"
+                name="published_date"
+                value="{{ book.published_date }}"
+                required
+            >
+        </p>
+
+        <p>
+            Pages:
+            <input
+                type="number"
+                name="pages"
+                min="1"
+                value="{{ book.pages }}"
+                required
+            >
+        </p>
+
+        <p>
+            Available:
+            <input
+                type="checkbox"
+                name="available"
+                {% if book.available %}checked{% endif %}
+            >
+        </p>
+
+        <button type="submit">Update Book</button>
+
+    </form>
+
+    <p>
+        <a href="/">Back to books</a>
+    </p>
+
+</body>
+</html>
