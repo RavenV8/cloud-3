@@ -11,36 +11,89 @@
 
     <h2>Add a Book</h2>
 
-    <form action="/add" method="POST">
+    <form action="/add" method="POST" enctype="multipart/form-data">
 
-        <p>
-            Title:
-            <input type="text" name="title" required>
-        </p>
+        <div>
+            <label for="title">Title:</label>
+            <input
+                type="text"
+                id="title"
+                name="title"
+                required
+            >
+        </div>
 
-        <p>
-            Author:
-            <input type="text" name="author" required>
-        </p>
+        <br>
 
-        <p>
-            Published date:
-            <input type="date" name="published_date" required>
-        </p>
+        <div>
+            <label for="author">Author:</label>
+            <input
+                type="text"
+                id="author"
+                name="author"
+                required
+            >
+        </div>
 
-        <p>
-            Pages:
-            <input type="number" name="pages" min="1" required>
-        </p>
+        <br>
 
-        <p>
-            Available:
-            <input type="checkbox" name="available" checked>
-        </p>
+        <div>
+            <label for="published_date">Published date:</label>
+            <input
+                type="date"
+                id="published_date"
+                name="published_date"
+                required
+            >
+        </div>
 
-        <button type="submit">Add Book</button>
+        <br>
+
+        <div>
+            <label for="pages">Pages:</label>
+            <input
+                type="number"
+                id="pages"
+                name="pages"
+                min="1"
+                required
+            >
+        </div>
+
+        <br>
+
+        <div>
+            <label for="author_portrait">Author portrait:</label>
+            <input
+                type="file"
+                id="author_portrait"
+                name="author_portrait"
+                accept="image/*"
+            >
+        </div>
+
+        <br>
+
+        <div>
+            <label>
+                <input
+                    type="checkbox"
+                    name="available"
+                >
+                Available
+            </label>
+        </div>
+
+        <br>
+
+        <button type="submit">
+            Add Book
+        </button>
 
     </form>
+
+
+    <hr>
 
 
     <h2>Books</h2>
@@ -50,16 +103,57 @@
         {% for book in books %}
 
             <div>
+
                 <h3>{{ book.title }}</h3>
 
-                <p>Author: {{ book.author }}</p>
-                <p>Published: {{ book.published_date }}</p>
-                <p>Pages: {{ book.pages }}</p>
-                <p>Available: {{ book.available }}</p>
+                <p>
+                    <strong>Author:</strong>
+                    {{ book.author }}
+                </p>
 
-                <a href="/edit/{{ book.id }}">Edit</a>
-                |
-                <a href="/delete/{{ book.id }}">Delete</a>
+                <p>
+                    <strong>Published date:</strong>
+                    {{ book.published_date }}
+                </p>
+
+                <p>
+                    <strong>Pages:</strong>
+                    {{ book.pages }}
+                </p>
+
+                <p>
+                    <strong>Available:</strong>
+                    {% if book.available %}
+                        Yes
+                    {% else %}
+                        No
+                    {% endif %}
+                </p>
+
+                {% if book.author_portrait %}
+                    <p>
+                        <strong>Author portrait:</strong>
+                    </p>
+
+                    <img
+                        src="{{ url_for('uploaded_file', filename=book.author_portrait) }}"
+                        width="150"
+                        alt="Author portrait"
+                    >
+                {% endif %}
+
+                <p>
+                    <a href="/edit/{{ book.id }}">
+                        Edit
+                    </a>
+
+                    |
+
+                    <a href="/delete/{{ book.id }}">
+                        Delete
+                    </a>
+                </p>
+
             </div>
 
             <hr>
