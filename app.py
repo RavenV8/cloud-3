@@ -10,6 +10,8 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from PIL import Image
 import os
+import threading
+import time
 import cloudinary
 import cloudinary.uploader
 import requests
@@ -387,6 +389,13 @@ def process_portraits():
 # -------------------------
 # RUN APPLICATION
 # -------------------------
+
+background_thread = threading.Thread(
+    target=process_portraits,
+    daemon=True
+)
+
+background_thread.start()
 
 
 if __name__ == "__main__":
