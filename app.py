@@ -403,13 +403,13 @@ def process_portraits():
 # -------------------------
 # RUN APPLICATION
 # -------------------------
+background_thread = threading.Thread(
+    target=process_portraits,
+    daemon=True
+)
+
+background_thread.start()
+
 
 if __name__ == "__main__":
-    background_thread = threading.Thread(
-        target=process_portraits,
-        daemon=True
-    )
-
-    background_thread.start()
-
     app.run(debug=True)
