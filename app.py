@@ -4,8 +4,7 @@ from flask import (
     request,
     redirect,
     url_for,
-    jsonify,
-    send_from_directory
+    jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -13,8 +12,13 @@ from PIL import Image
 import os
 import threading
 import time
+import cloudinary
+import cloudinary.uploader
+import requests
+from io import BytesIO
 
 app = Flask(__name__)
+
 
 # Database
 database_url = os.environ.get("DATABASE_URL")
@@ -33,11 +37,6 @@ else:
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# File storage
-UPLOAD_FOLDER = "uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 db = SQLAlchemy(app)
 
@@ -109,17 +108,15 @@ def add_book():
     available = "available" in request.form
 
     portrait = request.files.get("author_portrait")
-    filename = None
+    portrait_url = None
 
     if portrait and portrait.filename:
-        filename = portrait.filename
-
-        portrait.save(
-            os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                filename
-            )
+        result = cloudinary.uploader.upload(
+            portrait,
+            folder="book-manager"
         )
+
+        portrait_url = result["secure_url"]
 
     book = Book(
         title=title,
@@ -127,7 +124,7 @@ def add_book():
         published_date=published_date,
         pages=pages,
         available=available,
-        author_portrait=filename
+        author_portrait=portrait_url
     )
 
     db.session.add(book)
@@ -163,16 +160,12 @@ def edit_book(id):
         portrait = request.files.get("author_portrait")
 
         if portrait and portrait.filename:
-            filename = portrait.filename
-
-            portrait.save(
-                os.path.join(
-                    app.config["UPLOAD_FOLDER"],
-                    filename
-                )
+            result = cloudinary.uploader.upload(
+                portrait,
+                folder="book-manager"
             )
 
-            book.author_portrait = filename
+            book.author_portrait = result["secure_url"]
 
             book.portrait_width = None
             book.portrait_height = None
@@ -193,14 +186,6 @@ def delete_book(id):
     db.session.commit()
 
     return redirect(url_for("index"))
-
-
-@app.route("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(
-        app.config["UPLOAD_FOLDER"],
-        filename
-    )
 
 
 # -------------------------
@@ -370,32 +355,33 @@ def process_portraits():
             ).all()
 
             for book in books:
-                file_path = os.path.join(
-                    app.config["UPLOAD_FOLDER"],
-                    book.author_portrait
-                )
+                try:
+                    response = requests.get(
+                        book.author_portrait,
+                        timeout=30
+                    )
 
-                if os.path.exists(file_path):
-                    try:
-                        with Image.open(file_path) as image:
-                            book.portrait_width = image.width
-                            book.portrait_height = image.height
+                    response.raise_for_status()
 
-                        book.portrait_size = os.path.getsize(
-                            file_path
-                        )
+                    image_data = BytesIO(response.content)
 
-                        db.session.commit()
+                    with Image.open(image_data) as image:
+                        book.portrait_width = image.width
+                        book.portrait_height = image.height
 
-                        print(
-                            f"Background task processed "
-                            f"portrait for book: {book.title}"
-                        )
+                    book.portrait_size = len(response.content)
 
-                    except Exception as error:
-                        print(
-                            f"Could not process portrait: {error}"
-                        )
+                    db.session.commit()
+
+                    print(
+                        f"Background task processed "
+                        f"portrait for book: {book.title}"
+                    )
+
+                except Exception as error:
+                    print(
+                        f"Could not process portrait: {error}"
+                    )
 
         time.sleep(10)
 
@@ -403,6 +389,7 @@ def process_portraits():
 # -------------------------
 # RUN APPLICATION
 # -------------------------
+
 background_thread = threading.Thread(
     target=process_portraits,
     daemon=True
