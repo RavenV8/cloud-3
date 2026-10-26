@@ -1,3 +1,4 @@
+
 from flask import (
     Flask,
     render_template,
@@ -8,17 +9,11 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from PIL import Image
 import os
-import threading
-import time
 import cloudinary
 import cloudinary.uploader
-import requests
-from io import BytesIO
 
 app = Flask(__name__)
-
 
 # Database
 database_url = os.environ.get("DATABASE_URL")
@@ -26,9 +21,13 @@ database_url = os.environ.get("DATABASE_URL")
 if database_url:
     if database_url.startswith("postgres://"):
         database_url = database_url.replace(
-            "postgres://",
-            "postgresql://",
-            1
+            "postgres://", "postgresql://", 1
+        )
+
+    # Compatibility with PostgreSQL URLs using older driver syntax
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace(
+            "postgresql://", "postgresql+psycopg2://", 1
         )
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
@@ -36,7 +35,6 @@ else:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///books.db"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
 
 db = SQLAlchemy(app)
 
@@ -50,30 +48,30 @@ class Book(db.Model):
     pages = db.Column(db.Integer, nullable=False)
     available = db.Column(db.Boolean, default=True)
 
-    author_portrait = db.Column(
-        db.String(255),
-        nullable=True
-    )
-
-    portrait_width = db.Column(
-        db.Integer,
-        nullable=True
-    )
-
-    portrait_height = db.Column(
-        db.Integer,
-        nullable=True
-    )
-
-    portrait_size = db.Column(
-        db.Integer,
-        nullable=True
-    )
+    author_portrait = db.Column(db.String(255), nullable=True)
+    portrait_width = db.Column(db.Integer, nullable=True)
+    portrait_height = db.Column(db.Integer, nullable=True)
+    portrait_size = db.Column(db.Integer, nullable=True)
 
 
-# Create database
+# Create tables if they do not exist
 with app.app_context():
     db.create_all()
+
+
+def book_to_dict(book):
+    return {
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "published_date": book.published_date.isoformat(),
+        "pages": book.pages,
+        "available": book.available,
+        "author_portrait": book.author_portrait,
+        "portrait_width": book.portrait_width,
+        "portrait_height": book.portrait_height,
+        "portrait_size": book.portrait_size
+    }
 
 
 # -------------------------
@@ -88,34 +86,29 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add_book():
-    title = request.form["title"]
-    author = request.form["author"]
+    title = request.form.get("title", "").strip()
+    author = request.form.get("author", "").strip()
 
     try:
         published_date = datetime.strptime(
-            request.form["published_date"],
-            "%Y-%m-%d"
+            request.form["published_date"], "%Y-%m-%d"
         ).date()
-
         pages = int(request.form["pages"])
 
-        if pages <= 0:
-            return "Pages must be greater than 0", 400
+        if not title or not author or pages <= 0:
+            return "Invalid title, author or pages", 400
 
     except (ValueError, KeyError):
         return "Invalid date or pages", 400
 
     available = "available" in request.form
-
     portrait = request.files.get("author_portrait")
     portrait_url = None
 
     if portrait and portrait.filename:
         result = cloudinary.uploader.upload(
-            portrait,
-            folder="book-manager"
+            portrait, folder="book-manager"
         )
-
         portrait_url = result["secure_url"]
 
     book = Book(
@@ -135,56 +128,52 @@ def add_book():
 
 @app.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit_book(id):
-    book = Book.query.get_or_404(id)
+    book = db.get_or_404(Book, id)
 
     if request.method == "POST":
-        book.title = request.form["title"]
-        book.author = request.form["author"]
+        title = request.form.get("title", "").strip()
+        author = request.form.get("author", "").strip()
 
         try:
-            book.published_date = datetime.strptime(
-                request.form["published_date"],
-                "%Y-%m-%d"
+            published_date = datetime.strptime(
+                request.form["published_date"], "%Y-%m-%d"
             ).date()
+            pages = int(request.form["pages"])
 
-            book.pages = int(request.form["pages"])
-
-            if book.pages <= 0:
-                return "Pages must be greater than 0", 400
+            if not title or not author or pages <= 0:
+                return "Invalid title, author or pages", 400
 
         except (ValueError, KeyError):
             return "Invalid date or pages", 400
 
+        book.title = title
+        book.author = author
+        book.published_date = published_date
+        book.pages = pages
         book.available = "available" in request.form
 
         portrait = request.files.get("author_portrait")
 
         if portrait and portrait.filename:
             result = cloudinary.uploader.upload(
-                portrait,
-                folder="book-manager"
+                portrait, folder="book-manager"
             )
-
             book.author_portrait = result["secure_url"]
-
             book.portrait_width = None
             book.portrait_height = None
             book.portrait_size = None
 
         db.session.commit()
-
         return redirect(url_for("index"))
 
     return render_template("edit.html", book=book)
 
 
-@app.route("/delete/<int:id>")
+@app.route("/delete/<int:id>", methods=["POST", "GET"])
 def delete_book(id):
-    book = Book.query.get_or_404(id)
-
+    book = db.get_or_404(Book, id)
     db.session.delete(book)
     db.session.commit()
-
     return redirect(url_for("index"))
 
 
@@ -194,78 +183,41 @@ def delete_book(id):
 
 @app.route("/api/books", methods=["GET"])
 def api_get_books():
-    books = Book.query.all()
-
     return jsonify([
-        {
-            "id": book.id,
-            "title": book.title,
-            "author": book.author,
-            "published_date": book.published_date.isoformat(),
-            "pages": book.pages,
-            "available": book.available,
-            "author_portrait": book.author_portrait,
-            "portrait_width": book.portrait_width,
-            "portrait_height": book.portrait_height,
-            "portrait_size": book.portrait_size
-        }
-        for book in books
+        book_to_dict(book) for book in Book.query.all()
     ])
 
 
 @app.route("/api/books/<int:id>", methods=["GET"])
 def api_get_book(id):
-    book = Book.query.get_or_404(id)
-
-    return jsonify({
-        "id": book.id,
-        "title": book.title,
-        "author": book.author,
-        "published_date": book.published_date.isoformat(),
-        "pages": book.pages,
-        "available": book.available,
-        "author_portrait": book.author_portrait,
-        "portrait_width": book.portrait_width,
-        "portrait_height": book.portrait_height,
-        "portrait_size": book.portrait_size
-    })
+    book = db.get_or_404(Book, id)
+    return jsonify(book_to_dict(book))
 
 
 @app.route("/api/books", methods=["POST"])
 def api_create_book():
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
-    if not data:
-        return jsonify({
-            "error": "JSON data is required"
-        }), 400
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON data is required"}), 400
 
     try:
-        title = data["title"]
-        author = data["author"]
-
+        title = str(data["title"]).strip()
+        author = str(data["author"]).strip()
         published_date = datetime.strptime(
-            data["published_date"],
-            "%Y-%m-%d"
+            data["published_date"], "%Y-%m-%d"
         ).date()
-
         pages = int(data["pages"])
-        available = bool(data["available"])
+        available = data.get("available", True)
 
-        if not title or not author:
-            return jsonify({
-                "error": "Title and author are required"
-            }), 400
+        if not title or not author or pages <= 0:
+            raise ValueError
 
-        if pages <= 0:
-            return jsonify({
-                "error": "Pages must be greater than 0"
-            }), 400
+        if not isinstance(available, bool):
+            raise ValueError
 
     except (KeyError, ValueError, TypeError):
-        return jsonify({
-            "error": "Invalid input"
-        }), 400
+        return jsonify({"error": "Invalid input"}), 400
 
     book = Book(
         title=title,
@@ -286,111 +238,48 @@ def api_create_book():
 
 @app.route("/api/books/<int:id>", methods=["PUT"])
 def api_update_book(id):
-    book = Book.query.get_or_404(id)
+    book = db.get_or_404(Book, id)
+    data = request.get_json(silent=True)
 
-    data = request.get_json()
-
-    if not data:
-        return jsonify({
-            "error": "JSON data is required"
-        }), 400
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON data is required"}), 400
 
     try:
-        book.title = data["title"]
-        book.author = data["author"]
-
-        book.published_date = datetime.strptime(
-            data["published_date"],
-            "%Y-%m-%d"
+        title = str(data["title"]).strip()
+        author = str(data["author"]).strip()
+        published_date = datetime.strptime(
+            data["published_date"], "%Y-%m-%d"
         ).date()
+        pages = int(data["pages"])
+        available = data["available"]
 
-        book.pages = int(data["pages"])
-        book.available = bool(data["available"])
-
-        if not book.title or not book.author:
-            return jsonify({
-                "error": "Title and author are required"
-            }), 400
-
-        if book.pages <= 0:
-            return jsonify({
-                "error": "Pages must be greater than 0"
-            }), 400
+        if (
+            not title or not author or pages <= 0
+            or not isinstance(available, bool)
+        ):
+            raise ValueError
 
     except (KeyError, ValueError, TypeError):
-        return jsonify({
-            "error": "Invalid input"
-        }), 400
+        return jsonify({"error": "Invalid input"}), 400
+
+    book.title = title
+    book.author = author
+    book.published_date = published_date
+    book.pages = pages
+    book.available = available
 
     db.session.commit()
 
-    return jsonify({
-        "message": "Book updated"
-    })
+    return jsonify({"message": "Book updated"})
 
 
 @app.route("/api/books/<int:id>", methods=["DELETE"])
 def api_delete_book(id):
-    book = Book.query.get_or_404(id)
-
+    book = db.get_or_404(Book, id)
     db.session.delete(book)
     db.session.commit()
-
-    return jsonify({
-        "message": "Book deleted"
-    })
-
-
-# -------------------------
-# BACKGROUND TASK
-# -------------------------
-
-def process_portraits():
-    while True:
-        with app.app_context():
-
-            books = Book.query.filter(
-                Book.author_portrait.isnot(None),
-                Book.portrait_width.is_(None)
-            ).all()
-
-            for book in books:
-                try:
-                    response = requests.get(
-                        book.author_portrait,
-                        timeout=30
-                    )
-
-                    response.raise_for_status()
-
-                    image_data = BytesIO(response.content)
-
-                    with Image.open(image_data) as image:
-                        book.portrait_width = image.width
-                        book.portrait_height = image.height
-
-                    book.portrait_size = len(response.content)
-
-                    db.session.commit()
-
-                    print(
-                        f"Background task processed "
-                        f"portrait for book: {book.title}"
-                    )
-
-                except Exception as error:
-                    print(
-                        f"Could not process portrait: {error}"
-                    )
-
-        time.sleep(10)
-
-
-# -------------------------
-# RUN APPLICATION
-# -------------------------
-
+    return jsonify({"message": "Book deleted"})
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
