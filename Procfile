@@ -1,1 +1,2 @@
-web: gunicorn --bind 0.0.0.0:8080 app:app
+web: gunicorn app:app
+worker: python worker.py
