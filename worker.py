@@ -1,45 +1,43 @@
-import time
-import requests
+
 from io import BytesIO
+
+import requests
 from PIL import Image
 
 from app import app, db, Book
 
 
 def process_portraits():
-    while True:
-        with app.app_context():
+    with app.app_context():
+        try:
             books = Book.query.filter(
                 Book.author_portrait.isnot(None),
-                Book.portrait_width.is_(None)
+                Book.portrait_width.is_(None),
             ).all()
+
+            print(f"Rasta knygų nuotraukų apdorojimui: {len(books)}")
 
             for book in books:
                 try:
-                    response = requests.get(
-                        book.author_portrait,
-                        timeout=30
-                    )
+                    response = requests.get(book.author_portrait, timeout=30)
                     response.raise_for_status()
 
-                    image_data = BytesIO(response.content)
-
-                    with Image.open(image_data) as image:
+                    with Image.open(BytesIO(response.content)) as image:
                         book.portrait_width = image.width
                         book.portrait_height = image.height
 
                     book.portrait_size = len(response.content)
                     db.session.commit()
 
-                    print(
-                        f"Background task processed "
-                        f"portrait for book: {book.title}"
-                    )
+                    print(f"Apdorota: {book.title}")
 
                 except Exception as error:
-                    print(f"Could not process portrait: {error}")
+                    db.session.rollback()
+                    print(f"Nepavyko apdoroti '{book.title}': {error}")
 
-        time.sleep(10)
+        finally:
+            db.session.remove()
 
 
-process_portraits()
+if __name__ == "__main__":
+    process_portraits()
